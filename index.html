@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HotelPulse - PMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Arial', sans-serif; }
+    .sidebar { width: 250px; height: 100vh; position: fixed; }
+    .content { margin-left: 260px; padding: 20px; }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <!-- Sidebar -->
+  <div class="sidebar bg-blue-800 text-white p-4">
+    <h1 class="text-2xl font-bold mb-6">Hotel Pulse</h1>
+    <nav>
+      <ul>
+        <li><button onclick="showSection('reservations')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Reservas</button></li>
+        <li><button onclick="showSection('checkin')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Check-in/Check-out</button></li>
+        <li><button onclick="showSection('tariffs')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Tarifas</button></li>
+        <li><button onclick="showSection('prebooking')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Pré-Reserva</button></li>
+        <li><button onclick="showSection('reports')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Relatórios</button></li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Conteúdo Principal -->
+  <div class="content">
+    <!-- Seção de Reservas -->
+    <div id="reservations" class="section">
+      <h2 class="text-2xl font-bold mb-4">Gestão de Reservas</h2>
+      <div class="mb-4">
+        <input id="roomInput" type="text" placeholder="Número do Quarto" class="border p-2 mr-2">
+        <input id="dateInput" type="date" class="border p-2 mr-2">
+        <input id="guestInput" type="text" placeholder="Nome do Hóspede" class="border p-2 mr-2">
+        <select id="roomTypeInput" class="border p-2 mr-2">
+          <option value="standard">Standard</option>
+          <option value="deluxe">Deluxe</option>
+        </select>
+        <button onclick="addReservation()" class="bg-blue-600 text-white p-2 rounded">Adicionar Reserva</button>
+      </div>
+      <table class="w-full border-collapse border">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Quarto</th>
+            <th class="border p-2">Data</th>
+            <th class="border p-2">Hóspede</th>
+            <th class="border p-2">Tipo</th>
+            <th class="border p-2">Tarifa</th>
+            <th class="border p-2">Status</th>
+            <th class="border p-2">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="reservationTable"></tbody>
+      </table>
+    </div>
+
+    <!-- Seção de Check-in/Check-out -->
+    <div id="checkin" class="section hidden">
+      <h2 class="text-2xl font-bold mb-4">Check-in/Check-out</h2>
+      <div class="mb-4">
+        <input id="checkinRoom" type="text" placeholder="Número do Quarto" class="border p-2 mr-2">
+        <input id="checkinGuest" type="text" placeholder="Nome do Hóspede" class="border p-2 mr-2">
+        <button onclick="checkIn()" class="bg-green-600 text-white p-2 rounded">Check-in</button>
+        <button onclick="checkOut()" class="bg-red-600 text-white p-2 rounded">Check-out</button>
+      </div>
+    </div>
+
+    <!-- Seção de Tarifas -->
+    <div id="tariffs" class="section hidden">
+      <h2 class="text-2xl font-bold mb-4">Gestão de Tarifas</h2>
+      <div class="mb-4">
+        <select id="tariffRoomType" class="border p-2 mr-2">
+          <option value="standard">Standard</option>
+          <option value="deluxe">Deluxe</option>
+        </select>
+        <input id="tariffDateStart" type="date" class="border p-2 mr-2">
+        <input id="tariffDateEnd" type="date" class="border p-2 mr-2">
+        <input id="tariffPrice" type="number" placeholder="Preço (R$)" class="border p-2 mr-2">
+        <button onclick="addTariff()" class="bg-blue-600 text-white p-2 rounded">Adicionar Tarifa</button>
+      </div>
+      <table class="w-full border-collapse border">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Tipo de Quarto</th>
+            <th class="border p-2">Início</th>
+            <th class="border p-2">Fim</th>
+            <th class="border p-2">Preço (R$)</th>
+            <th class="border p-2">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tariffTable"></tbody>
+      </table>
+    </div>
+
+    <!-- Seção de Pré-Reserva -->
+    <div id="prebooking" class="section hidden">
+      <h2 class="text-2xl font-bold mb-4">Formulário de Pré-Reserva</h2>
+      <div class="mb-4">
+        <input id="prebookName" type="text" placeholder="Nome Completo" class="border p-2 mb-2 w-full">
+        <input id="prebookEmail" type="email" placeholder="E-mail" class="border p-2 mb-2 w-full">
+        <input id="prebookPhone" type="tel" placeholder="Telefone" class="border p-2 mb-2 w-full">
+        <input id="prebookCheckin" type="date" class="border p-2 mb-2 w-1/2">
+        <input id="prebookCheckout" type="date" class="border p-2 mb-2 w-1/2">
+        <input id="prebookAdults" type="number" placeholder="Adultos" class="border p-2 mb-2 w-1/4">
+        <input id="prebookChildren" type="number" placeholder="Crianças" class="border p-2 mb-2 w-1/4">
+        <select id="prebookRoomType" class="border p-2 mb-2 w-1/2">
+          <option value="standard">Standard</option>
+          <option value="deluxe">Deluxe</option>
+        </select>
+        <textarea id="prebookMessage" placeholder="Mensagem Adicional" class="border p-2 mb-2 w-full"></textarea>
+        <button onclick="submitPrebooking()" class="bg-blue-600 text-white p-2 rounded">Enviar Pré-Reserva</button>
+      </div>
+      <h3 class="text-xl font-bold mb-2">Pré-Reservas Recebidas</h3>
+      <table class="w-full border-collapse border">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Nome</th>
+            <th class="border p-2">E-mail</th>
+            <th class="border p-2">Check-in</th>
+            <th class="border p-2">Check-out</th>
+            <th class="border p-2">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="prebookingTable"></tbody>
+      </table>
+    </div>
+
+    <!-- Seção de Relatórios -->
+    <div id="reports" class="section hidden">
+      <h2 class="text-2xl font-bold mb-4">Relatórios</h2>
+      <canvas id="occupancyChart" width="400" height="200"></canvas>
+      <button onclick="generateReport()" class="bg-blue-600 text-white p-2 rounded mt-4">Gerar Relatório</button>
+    </div>
+  </div>
+
+  <script>
+    // Inicialização
+    let reservations = JSON.parse(localStorage.getItem('reservations')) || [];
+    let tariffs = JSON.parse(localStorage.getItem('tariffs')) || [];
+    let prebookings = JSON.parse(localStorage.getItem('prebookings')) || [];
+
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(section => section.classList.add('hidden'));
+      document.getElementById(sectionId).classList.remove('hidden');
+      if (sectionId === 'reports') updateChart();
+      if (sectionId === 'tariffs') updateTariffTable();
+      if (sectionId === 'prebooking') updatePrebookingTable();
+    }
+
+    // Adicionar Reserva
+    function addReservation() {
+      const room = document.getElementById('roomInput').value;
+      const date = document.getElementById('dateInput').value;
+      const guest = document.getElementById('guestInput').value;
+      const roomType = document.getElementById('roomTypeInput').value;
+      if (room && date && guest && roomType) {
+        const tariff = getTariff(roomType, date);
+        reservations.push({ room, date, guest, roomType, tariff: tariff || 100, status: 'Reservado' });
+        localStorage.setItem('reservations', JSON.stringify(reservations));
+        updateTable();
+        clearReservationInputs();
+      } else {
+        alert('Preencha todos os campos!');
+      }
+    }
+
+    // Obter Tarifa
+    function getTariff(roomType, date) {
+      const checkDate = new Date(date);
+      for (let tariff of tariffs) {
+        const start = new Date(tariff.start);
+        const end = new Date(tariff.end);
+        if (tariff.roomType === roomType && checkDate >= start && checkDate <= end) {
+          return tariff.price;
+        }
+      }
+      return null; // Tarifa padrão se não encontrada
+    }
+
+    // Check-in
+    function checkIn() {
+      const room = document.getElementById('checkinRoom').value;
+      const guest = document.getElementById('checkinGuest').value;
+      const reservation = reservations.find(r => r.room === room && r.status === 'Reservado');
+      if (reservation) {
+        reservation.status = 'Ocupado';
+        localStorage.setItem('reservations', JSON.stringify(reservations));
+        updateTable();
+      } else {
+        alert('Reserva não encontrada!');
+      }
+    }
+
+    // Check-out
+    function checkOut() {
+      const room = document.getElementById('checkinRoom').value;
+      const reservation = reservations.find(r => r.room === room && r.status === 'Ocupado');
+      if (reservation) {
+        reservation.status = 'Finalizado';
+        localStorage.setItem('reservations', JSON.stringify(reservations));
+        updateTable();
+      } else {
+        alert('Quarto não está ocupado!');
+      }
+    }
+
+    // Adicionar Tarifa
+    function addTariff() {
+      const roomType = document.getElementById('tariffRoomType').value;
+      const start = document.getElementById('tariffDateStart').value;
+      const end = document.getElementById('tariffDateEnd').value;
+      const price = parseFloat(document.getElementById('tariffPrice').value);
+      if (roomType && start && end && price) {
+        tariffs.push({ roomType, start, end, price });
+        localStorage.setItem('tariffs', JSON.stringify(tariffs));
+        updateTariffTable();
+        clearTariffInputs();
+      } else {
+        alert('Preencha todos os campos!');
+      }
+    }
+
+    // Enviar Pré-Reserva
+    function submitPrebooking() {
+      const name = document.getElementById('prebookName').value;
+      const email = document.getElementById('prebookEmail').value;
+      const phone = document.getElementById('prebookPhone').value;
+      const checkin = document.getElementById('prebookCheckin').value;
+      const checkout = document.getElementById('prebookCheckout').value;
+      const adults = document.getElementById('prebookAdults').value;
+      const children = document.getElementById('prebookChildren').value;
+      const roomType = document.getElementById('prebookRoomType').value;
+      const message = document.getElementById('prebookMessage').value;
+      if (name && email && phone && checkin && checkout && adults && roomType) {
+        prebookings.push({ name, email, phone, checkin, checkout, adults, children, roomType, message });
+        localStorage.setItem('prebookings', JSON.stringify(prebookings));
+        updatePrebookingTable();
+        clearPrebookingInputs();
+        alert('Pré-reserva enviada com sucesso!');
+      } else {
+        alert('Preencha todos os campos obrigatórios!');
+      }
+    }
+
+    // Atualizar Tabela de Reservas
+    function updateTable() {
+      const tableBody = document.getElementById('reservationTable');
+      tableBody.innerHTML = '';
+      reservations.forEach(res => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="border p-2">${res.room}</td>
+          <td class="border p-2">${res.date}</td>
+          <td class="border p-2">${res.guest}</td>
+          <td class="border p-2">${res.roomType}</td>
+          <td class="border p-2">R$ ${res.tariff.toFixed(2)}</td>
+          <td class="border p-2">${res.status}</td>
+          <td class="border p-2">
+            <button onclick="deleteReservation('${res.room}', '${res.date}')" class="bg-red-600 text-white p-1 rounded">Excluir</button>
+          </td>`;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Atualizar Tabela de Tarifas
+    function updateTariffTable() {
+      const tableBody = document.getElementById('tariffTable');
+      tableBody.innerHTML = '';
+      tariffs.forEach(tariff => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="border p-2">${tariff.roomType}</td>
+          <td class="border p-2">${tariff.start}</td>
+          <td class="border p-2">${tariff.end}</td>
+          <td class="border p-2">R$ ${tariff.price.toFixed(2)}</td>
+          <td class="border p-2">
+            <button onclick="deleteTariff('${tariff.roomType}', '${tariff.start}')" class="bg-red-600 text-white p-1 rounded">Excluir</button>
+          </td>`;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Atualizar Tabela de Pré-Reservas
+    function updatePrebookingTable() {
+      const tableBody = document.getElementById('prebookingTable');
+      tableBody.innerHTML = '';
+      prebookings.forEach(prebook => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="border p-2">${prebook.name}</td>
+          <td class="border p-2">${prebook.email}</td>
+          <td class="border p-2">${prebook.checkin}</td>
+          <td class="border p-2">${prebook.checkout}</td>
+          <td class="border p-2">
+            <button onclick="deletePrebooking('${prebook.email}', '${prebook.checkin}')" class="bg-red-600 text-white p-1 rounded">Excluir</button>
+          </td>`;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Excluir Reserva
+    function deleteReservation(room, date) {
+      reservations = reservations.filter(r => r.room !== room || r.date !== date);
+      localStorage.setItem('reservations', JSON.stringify(reservations));
+      updateTable();
+    }
+
+    // Excluir Tarifa
+    function deleteTariff(roomType, start) {
+      tariffs = tariffs.filter(t => t.roomType !== roomType || t.start !== start);
+      localStorage.setItem('tariffs', JSON.stringify(tariffs));
+      updateTariffTable();
+    }
+
+    // Excluir Pré-Reserva
+    function deletePrebooking(email, checkin) {
+      prebookings = prebookings.filter(p => p.email !== email || p.checkin !== checkin);
+      localStorage.setItem('prebookings', JSON.stringify(prebookings));
+      updatePrebookingTable();
+    }
+
+    // Limpar Inputs de Reservas
+    function clearReservationInputs() {
+      document.getElementById('roomInput').value = '';
+      document.getElementById('dateInput').value = '';
+      document.getElementById('guestInput').value = '';
+      document.getElementById('roomTypeInput').value = 'standard';
+    }
+
+    // Limpar Inputs de Tarifas
+    function clearTariffInputs() {
+      document.getElementById('tariffRoomType').value = 'standard';
+      document.getElementById('tariffDateStart').value = '';
+      document.getElementById('tariffDateEnd').value = '';
+      document.getElementById('tariffPrice').value = '';
+    }
+
+    // Limpar Inputs de Pré-Reserva
+    function clearPrebookingInputs() {
+      document.getElementById('prebookName').value = '';
+      document.getElementById('prebookEmail').value = '';
+      document.getElementById('prebookPhone').value = '';
+      document.getElementById('prebookCheckin').value = '';
+      document.getElementById('prebookCheckout').value = '';
+      document.getElementById('prebookAdults').value = '';
+      document.getElementById('prebookChildren').value = '';
+      document.getElementById('prebookRoomType').value = 'standard';
+      document.getElementById('prebookMessage').value = '';
+    }
+
+    // Atualizar Gráfico
+    function updateChart() {
+      const ctx = document.getElementById('occupancyChart').getContext('2d');
+      const statusCount = {
+        Reservado: reservations.filter(r => r.status === 'Reservado').length,
+        Ocupado: reservations.filter(r => r.status === 'Ocupado').length,
+        Finalizado: reservations.filter(r => r.status === 'Finalizado').length
+      };
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Reservado', 'Ocupado', 'Finalizado'],
+          datasets: [{
+            label: 'Status das Reservas',
+            data: [statusCount.Reservado, statusCount.Ocupado, statusCount.Finalizado],
+            backgroundColor: ['#3498db', '#2ecc71', '#e74c3c']
+          }]
+        }
+      });
+    }
+
+    // Gerar Relatório
+    function generateReport() {
+      const report = {
+        reservations: reservations,
+        tariffs: tariffs,
+        prebookings: prebookings
+      };
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'relatorio_hotelpulse.json';
+      a.click();
+    }
+
+    // Inicializar Tabelas
+    updateTable();
+    updateTariffTable();
+    updatePrebookingTable();
+  </script>
+</body>
+</html>
