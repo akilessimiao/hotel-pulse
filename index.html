@@ -4,28 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HotelPulse - Pousada Praia de Ponta Negra</title>
-  <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://apis.google.com/js/api.js"></script>
-  <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+  <script src="https://cdn.emailjs.com/sdk/4.4.0/email.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body { font-family: 'Arial', sans-serif; }
     .sidebar { width: 250px; height: 100vh; position: fixed; }
     .content { margin-left: 260px; padding: 20px; }
     footer { margin-left: 260px; padding: 20px; background: #f8f8f8; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .calendar-day { border: 1px solid #ccc; padding: 5px; text-align: center; cursor: pointer; }
+    .legend { border: 1px solid #ccc; padding: 10px; margin-left: 10px; display: inline-block; vertical-align: top; }
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border: 1px solid #ccc; z-index: 1000; }
   </style>
 </head>
 <body class="bg-gray-100">
-  <!-- Sidebar -->
   <div class="sidebar bg-blue-800 text-white p-4">
     <h1 class="text-2xl font-bold mb-6">Hotel Pulse</h1>
     <p class="text-sm mb-4">Pousada Praia de Ponta Negra</p>
     <nav>
       <ul>
-        <li><button onclick="showSection('reservations')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Reservas</button></li>
+        <li><button onclick="showSection('occupancy')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Mapa de Ocupação</button></li>
         <li><button onclick="showSection('checkin')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Check-in/Check-out</button></li>
         <li><button onclick="showSection('tariffs')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Tarifas</button></li>
         <li><button onclick="showSection('prebooking')" class="w-full text-left py-2 px-4 hover:bg-blue-700">Pré-Reserva</button></li>
@@ -34,55 +37,105 @@
     </nav>
   </div>
 
-  <!-- Conteúdo Principal -->
   <div class="content">
-    <!-- Seção de Reservas -->
-    <div id="reservations" class="section">
-      <h2 class="text-2xl font-bold mb-4">Gestão de Reservas</h2>
+    <div id="occupancy" class="section">
+      <h2 class="text-2xl font-bold mb-4">Mapa de Ocupação</h2>
       <div class="mb-4">
-        <input id="roomInput" type="text" placeholder="Número do Quarto" class="border p-2 mr-2">
-        <input id="dateInput" type="date" class="border p-2 mr-2">
-        <input id="guestInput" type="text" placeholder="Nome do Hóspede" class="border p-2 mr-2">
-        <select id="roomTypeInput" class="border p-2 mr-2">
-          <option value="standard">Standard</option>
-          <option value="deluxe">Deluxe</option>
+        <select id="uhSelect" class="border p-2 mr-2">
+          <option value="01">01=QUARTO SÉXTUPLO</option>
+          <option value="02">02=QUARTO TRIPLO</option>
+          <option value="03">03=QUARTO QUADRUPLO</option>
+          <option value="04">04=QUARTO QUÁDRUPLO</option>
+          <option value="05">05=QUARTO TRIPLO</option>
+          <option value="06">06=QUARTO QUADRUPLO</option>
+          <option value="07">07=QUARTO QUINTUPLO</option>
+          <option value="08">08=QUARTO QUINTUPLO</option>
+          <option value="09">09=QUARTO QUINTUPLO</option>
+          <option value="10">10=QUARTO DUPLO</option>
+          <option value="11">11=QUARTO DUPLO</option>
+          <option value="12">12=QUARTO DUPLO</option>
+          <option value="13">13=QUARTO DUPLO</option>
+          <option value="14">14=QUARTO QUÁDRUPLO</option>
+          <option value="15">15=QUARTO MOTORISTA</option>
+          <option value="16">16=QUARTO QUADRUPLO</option>
+          <option value="17">17=QUARTO QUADRUPLO</option>
+          <option value="18">18=QUARTO QUADRUPLO</option>
         </select>
+        <input id="dateInput" type="date" class="border p-2 mr-2" value="2025-06-01">
+        <input id="guestInput" type="text" placeholder="Nome do Hóspede" class="border p-2 mr-2">
         <button onclick="addReservation()" class="bg-blue-600 text-white p-2 rounded">Adicionar Reserva</button>
       </div>
-      <table class="w-full border-collapse border">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="border p-2">Quarto</th>
-            <th class="border p-2">Data</th>
-            <th class="border p-2">Hóspede</th>
-            <th class="border p-2">Tipo</th>
-            <th class="border p-2">Tarifa</th>
-            <th class="border p-2">Status</th>
-            <th class="border p-2">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="reservationTable"></tbody>
-      </table>
+      <div style="display: inline-block;">
+        <div class="calendar" id="calendar"></div>
+      </div>
+      <div class="legend">
+        <h3>Legenda</h3>
+        <p>Disponível: ☐</p>
+        <p>Reservado: □</p>
+        <p>Ocupado: ■</p>
+      </div>
+      <div id="popup" class="popup">
+        <h3>Detalhes da Reserva</h3>
+        <p id="popupUh"></p>
+        <p id="popupGuest"></p>
+        <p id="popupCheckIn"></p>
+        <p id="popupCheckOut"></p>
+        <p id="popupDiarias"></p>
+        <p id="popupTotal"></p>
+        <button onclick="closePopup()" class="bg-red-600 text-white p-2 rounded mt-2">Fechar</button>
+      </div>
     </div>
 
-    <!-- Seção de Check-in/Check-out -->
     <div id="checkin" class="section hidden">
       <h2 class="text-2xl font-bold mb-4">Check-in/Check-out</h2>
       <div class="mb-4">
-        <input id="checkinRoom" type="text" placeholder="Número do Quarto" class="border p-2 mr-2">
-        <input id="checkinGuest" type="text" placeholder="Nome do Hóspede" class="border p-2 mr-2">
+        <select id="checkinUh" class="border p-2 mr-2">
+          <option value="01">01=QUARTO SÉXTUPLO</option>
+          <option value="02">02=QUARTO TRIPLO</option>
+          <option value="03">03=QUARTO QUADRUPLO</option>
+          <option value="04">04=QUARTO QUÁDRUPLO</option>
+          <option value="05">05=QUARTO TRIPLO</option>
+          <option value="06">06=QUARTO QUADRUPLO</option>
+          <option value="07">07=QUARTO QUINTUPLO</option>
+          <option value="08">08=QUARTO QUINTUPLO</option>
+          <option value="09">09=QUARTO QUINTUPLO</option>
+          <option value="10">10=QUARTO DUPLO</option>
+          <option value="11">11=QUARTO DUPLO</option>
+          <option value="12">12=QUARTO DUPLO</option>
+          <option value="13">13=QUARTO DUPLO</option>
+          <option value="14">14=QUARTO QUÁDRUPLO</option>
+          <option value="15">15=QUARTO MOTORISTA</option>
+          <option value="16">16=QUARTO QUADRUPLO</option>
+          <option value="17">17=QUARTO QUADRUPLO</option>
+          <option value="18">18=QUARTO QUADRUPLO</option>
+        </select>
         <button onclick="checkIn()" class="bg-green-600 text-white p-2 rounded">Check-in</button>
         <button onclick="checkOut()" class="bg-red-600 text-white p-2 rounded">Check-out</button>
       </div>
     </div>
 
-    <!-- Seção de Tarifas -->
     <div id="tariffs" class="section hidden">
       <h2 class="text-2xl font-bold mb-4">Gestão de Tarifas</h2>
       <div class="mb-4">
-        <select id="tariffRoomType" class="border p-2 mr-2">
-          <option value="standard">Standard</option>
-          <option value="deluxe">Deluxe</option>
+        <select id="tariffUh" class="border p-2 mr-2">
+          <option value="01">01=QUARTO SÉXTUPLO</option>
+          <option value="02">02=QUARTO TRIPLO</option>
+          <option value="03">03=QUARTO QUADRUPLO</option>
+          <option value="04">04=QUARTO QUÁDRUPLO</option>
+          <option value="05">05=QUARTO TRIPLO</option>
+          <option value="06">06=QUARTO QUADRUPLO</option>
+          <option value="07">07=QUARTO QUINTUPLO</option>
+          <option value="08">08=QUARTO QUINTUPLO</option>
+          <option value="09">09=QUARTO QUINTUPLO</option>
+          <option value="10">10=QUARTO DUPLO</option>
+          <option value="11">11=QUARTO DUPLO</option>
+          <option value="12">12=QUARTO DUPLO</option>
+          <option value="13">13=QUARTO DUPLO</option>
+          <option value="14">14=QUARTO QUÁDRUPLO</option>
+          <option value="15">15=QUARTO MOTORISTA</option>
+          <option value="16">16=QUARTO QUADRUPLO</option>
+          <option value="17">17=QUARTO QUADRUPLO</option>
+          <option value="18">18=QUARTO QUADRUPLO</option>
         </select>
         <input id="tariffDateStart" type="date" class="border p-2 mr-2">
         <input id="tariffDateEnd" type="date" class="border p-2 mr-2">
@@ -92,7 +145,7 @@
       <table class="w-full border-collapse border">
         <thead>
           <tr class="bg-gray-200">
-            <th class="border p-2">Tipo de Quarto</th>
+            <th class="border p-2">UH</th>
             <th class="border p-2">Início</th>
             <th class="border p-2">Fim</th>
             <th class="border p-2">Preço (R$)</th>
@@ -103,7 +156,6 @@
       </table>
     </div>
 
-    <!-- Seção de Pré-Reserva -->
     <div id="prebooking" class="section hidden">
       <h2 class="text-2xl font-bold mb-4">Formulário de Pré-Reserva</h2>
       <p class="mb-4">Faça seu pedido de pré-reserva e em breve entraremos em contato.</p>
@@ -112,17 +164,33 @@
         <input id="prebookFirstName" type="text" placeholder="Nome" class="border p-2 mb-2 w-1/2 mr-2">
         <input id="prebookLastName" type="text" placeholder="Sobrenome" class="border p-2 mb-2 w-1/2">
         <input id="prebookCPF" type="text" placeholder="CPF (000.000.000-00)" class="border p-2 mb-2 w-full" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}">
-        <input id="prebookEmail" type="email" placeholder="E-mail" class= "border p-2 mb-2 w-full">
+        <input id="prebookEmail" type="email" placeholder="E-mail" class="border p-2 mb-2 w-full">
         <input id="prebookPhone" type="tel" placeholder="Telefone (+55 (00) 00000-0000)" class="border p-2 mb-2 w-full">
         <h3 class="text-lg font-bold mb-2 mt-4">Sua Reserva</h3>
+        <select id="prebookUh" class="border p-2 mb-2 w-1/2">
+          <option value="01">01=QUARTO SÉXTUPLO</option>
+          <option value="02">02=QUARTO TRIPLO</option>
+          <option value="03">03=QUARTO QUADRUPLO</option>
+          <option value="04">04=QUARTO QUÁDRUPLO</option>
+          <option value="05">05=QUARTO TRIPLO</option>
+          <option value="06">06=QUARTO QUADRUPLO</option>
+          <option value="07">07=QUARTO QUINTUPLO</option>
+          <option value="08">08=QUARTO QUINTUPLO</option>
+          <option value="09">09=QUARTO QUINTUPLO</option>
+          <option value="10">10=QUARTO DUPLO</option>
+          <option value="11">11=QUARTO DUPLO</option>
+          <option value="12">12=QUARTO DUPLO</option>
+          <option value="13">13=QUARTO DUPLO</option>
+          <option value="14">14=QUARTO QUÁDRUPLO</option>
+          <option value="15">15=QUARTO MOTORISTA</option>
+          <option value="16">16=QUARTO QUADRUPLO</option>
+          <option value="17">17=QUARTO QUADRUPLO</option>
+          <option value="18">18=QUARTO QUADRUPLO</option>
+        </select>
         <input id="prebookCheckin" type="date" placeholder="Data de Entrada" class="border p-2 mb-2 w-1/2 mr-2">
         <input id="prebookCheckout" type="date" placeholder="Data de Saída" class="border p-2 mb-2 w-1/2">
         <input id="prebookAdults" type="number" placeholder="Adultos" class="border p-2 mb-2 w-1/4 mr-2" min="1">
         <input id="prebookChildren" type="number" placeholder="Crianças" class="border p-2 mb-2 w-1/4" min="0">
-        <select id="prebookRoomType" class="border p-2 mb-2 w-1/2">
-          <option value="standard">Standard</option>
-          <option value="deluxe">Deluxe</option>
-        </select>
         <textarea id="prebookObservations" placeholder="Observações (Ex: Quero 2 quartos com cama de casal e ar condicionado)" class="border p-2 mb-2 w-full"></textarea>
         <input id="prebookPromoCode" type="text" placeholder="Código Promocional" class="border p-2 mb-2 w-full">
         <button onclick="submitPrebooking()" class="bg-blue-600 text-white p-2 rounded">Enviar Pré-Reserva</button>
@@ -132,8 +200,7 @@
         <thead>
           <tr class="bg-gray-200">
             <th class="border p-2">Nome</th>
-            <th class="border p-2">E-mail</th>
-            <th class="border p-2">CPF</th>
+            <th class="border p-2">UH</th>
             <th class="border p-2">Check-in</th>
             <th class="border p-2">Check-out</th>
             <th class="border p-2">Ações</th>
@@ -143,7 +210,6 @@
       </table>
     </div>
 
-    <!-- Seção de Relatórios -->
     <div id="reports" class="section hidden">
       <h2 class="text-2xl font-bold mb-4">Relatórios</h2>
       <canvas id="occupancyChart" width="400" height="200"></canvas>
@@ -151,11 +217,11 @@
         <button onclick="generateReport()" class="bg-blue-600 text-white p-2 rounded mr-2">Baixar Relatório</button>
         <button onclick="uploadToDrive()" class="bg-green-600 text-white p-2 rounded mr-2">Enviar para Google Drive</button>
         <button onclick="sendReportEmail()" class="bg-purple-600 text-white p-2 rounded">Enviar por E-mail</button>
+        <button onclick="generateReceipt()" class="bg-yellow-600 text-white p-2 rounded">Gerar Recibo</button>
       </div>
     </div>
   </div>
 
-  <!-- Rodapé -->
   <footer class="text-gray-600">
     <p><strong>Pousada Praia de Ponta Negra</strong></p>
     <p>Rua Luiz Estevam, 2277, Ponta Negra, Natal, Rio Grande do Norte</p>
@@ -164,15 +230,11 @@
   </footer>
 
   <script>
-    // Configurações do Google Drive
-    const CLIENT_ID = 'SUA_CLIENT_ID_AQUI'; // Substitua pelo seu Client ID do Google Cloud
-    const API_KEY = 'SUA_API_KEY_AQUI'; // Substitua pela sua API Key
+    const CLIENT_ID = 'SUA_CLIENT_ID_AQUI';
+    const API_KEY = 'SUA_API_KEY_AQUI';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+    emailjs.init('SEU_USER_ID_AQUI');
 
-    // Configurações do EmailJS
-    (function(){emailjs.init('SEU_USER_ID_AQUI');})(); // Substitua pelo seu User ID do EmailJS
-
-    // Inicialização
     let reservations = JSON.parse(localStorage.getItem('reservations')) || [];
     let tariffs = JSON.parse(localStorage.getItem('tariffs')) || [];
     let prebookings = JSON.parse(localStorage.getItem('prebookings')) || [];
@@ -180,76 +242,109 @@
     function showSection(sectionId) {
       document.querySelectorAll('.section').forEach(section => section.classList.add('hidden'));
       document.getElementById(sectionId).classList.remove('hidden');
+      if (sectionId === 'occupancy') updateCalendar();
       if (sectionId === 'reports') updateChart();
       if (sectionId === 'tariffs') updateTariffTable();
       if (sectionId === 'prebooking') updatePrebookingTable();
     }
 
-    // Adicionar Reserva
+    function updateCalendar() {
+      const calendar = document.getElementById('calendar');
+      calendar.innerHTML = '';
+      const startDate = new Date('2025-06-01');
+      const days = 19;
+      const daysOfWeek = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+
+      daysOfWeek.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day bg-gray-200 font-bold';
+        header.textContent = day;
+        calendar.appendChild(header);
+      });
+
+      for (let i = 0; i < days; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        dayElement.textContent = date.getDate();
+        dayElement.dataset.date = date.toISOString().split('T')[0];
+
+        const reservation = reservations.find(r => r.uh === document.getElementById('uhSelect').value && r.date === dayElement.dataset.date);
+        if (reservation) {
+          dayElement.classList.add(reservation.status === 'Ocupado' ? 'bg-red-500' : 'bg-purple-300');
+          dayElement.onclick = () => showPopup(reservation);
+        } else {
+          dayElement.classList.add('bg-green-200');
+        }
+        calendar.appendChild(dayElement);
+      }
+    }
+
+    function showPopup(reservation) {
+      document.getElementById('popupUh').textContent = `UH: ${reservation.uh}`;
+      document.getElementById('popupGuest').textContent = `Hóspede: ${reservation.guest}`;
+      document.getElementById('popupCheckIn').textContent = `Check-in: ${reservation.checkIn}`;
+      document.getElementById('popupCheckOut').textContent = `Check-out: ${reservation.checkOut}`;
+      document.getElementById('popupDiarias').textContent = `Diárias: ${reservation.diarias}`;
+      document.getElementById('popupTotal').textContent = `Total: R$ ${reservation.total.toFixed(2)}`;
+      document.getElementById('popup').style.display = 'block';
+    }
+
+    function closePopup() {
+      document.getElementById('popup').style.display = 'none';
+    }
+
     function addReservation() {
-      const room = document.getElementById('roomInput').value;
+      const uh = document.getElementById('uhSelect').value;
       const date = document.getElementById('dateInput').value;
       const guest = document.getElementById('guestInput').value;
-      const roomType = document.getElementById('roomTypeInput').value;
-      if (room && date && guest && roomType) {
-        const tariff = getTariff(roomType, date);
-        reservations.push({ room, date, guest, roomType, tariff: tariff || 100, status: 'Reservado' });
+      if (uh && date && guest) {
+        const tariff = getTariff(uh, date) || 95.00;
+        const checkIn = date;
+        const checkOut = new Date(new Date(date).setDate(new Date(date).getDate() + 1)).toISOString().split('T')[0];
+        const diarias = 1;
+        const total = tariff * diarias;
+        reservations.push({ uh, date, checkIn, checkOut, guest, diarias, total, status: 'Reservado' });
         localStorage.setItem('reservations', JSON.stringify(reservations));
-        updateTable();
+        updateCalendar();
         clearReservationInputs();
       } else {
         alert('Preencha todos os campos!');
       }
     }
 
-    // Obter Tarifa
-    function getTariff(roomType, date) {
-      const checkDate = new Date(date);
-      for (let tariff of tariffs) {
-        const start = new Date(tariff.start);
-        const end = new Date(tariff.end);
-        if (tariff.roomType === roomType && checkDate >= start && checkDate <= end) {
-          return tariff.price;
-        }
-      }
-      return null; // Tarifa padrão
-    }
-
-    // Check-in
     function checkIn() {
-      const room = document.getElementById('checkinRoom').value;
-      const guest = document.getElementById('checkinGuest').value;
-      const reservation = reservations.find(r => r.room === room && r.status === 'Reservado');
+      const uh = document.getElementById('checkinUh').value;
+      const reservation = reservations.find(r => r.uh === uh && r.status === 'Reservado');
       if (reservation) {
         reservation.status = 'Ocupado';
         localStorage.setItem('reservations', JSON.stringify(reservations));
-        updateTable();
+        updateCalendar();
       } else {
         alert('Reserva não encontrada!');
       }
     }
 
-    // Check-out
     function checkOut() {
-      const room = document.getElementById('checkinRoom').value;
-      const reservation = reservations.find(r => r.room === room && r.status === 'Ocupado');
+      const uh = document.getElementById('checkinUh').value;
+      const reservation = reservations.find(r => r.uh === uh && r.status === 'Ocupado');
       if (reservation) {
         reservation.status = 'Finalizado';
         localStorage.setItem('reservations', JSON.stringify(reservations));
-        updateTable();
+        updateCalendar();
       } else {
         alert('Quarto não está ocupado!');
       }
     }
 
-    // Adicionar Tarifa
     function addTariff() {
-      const roomType = document.getElementById('tariffRoomType').value;
+      const uh = document.getElementById('tariffUh').value;
       const start = document.getElementById('tariffDateStart').value;
       const end = document.getElementById('tariffDateEnd').value;
       const price = parseFloat(document.getElementById('tariffPrice').value);
-      if (roomType && start && end && price) {
-        tariffs.push({ roomType, start, end, price });
+      if (uh && start && end && price) {
+        tariffs.push({ uh, start, end, price });
         localStorage.setItem('tariffs', JSON.stringify(tariffs));
         updateTariffTable();
         clearTariffInputs();
@@ -258,22 +353,21 @@
       }
     }
 
-    // Enviar Pré-Reserva
     function submitPrebooking() {
       const firstName = document.getElementById('prebookFirstName').value;
       const lastName = document.getElementById('prebookLastName').value;
       const cpf = document.getElementById('prebookCPF').value;
       const email = document.getElementById('prebookEmail').value;
       const phone = document.getElementById('prebookPhone').value;
+      const uh = document.getElementById('prebookUh').value;
       const checkin = document.getElementById('prebookCheckin').value;
       const checkout = document.getElementById('prebookCheckout').value;
       const adults = document.getElementById('prebookAdults').value;
       const children = document.getElementById('prebookChildren').value;
-      const roomType = document.getElementById('prebookRoomType').value;
       const observations = document.getElementById('prebookObservations').value;
       const promoCode = document.getElementById('prebookPromoCode').value;
-      if (firstName && lastName && cpf && email && phone && checkin && checkout && adults && roomType) {
-        prebookings.push({ firstName, lastName, cpf, email, phone, checkin, checkout, adults, children, roomType, observations, promoCode });
+      if (firstName && lastName && cpf && email && phone && uh && checkin && checkout && adults) {
+        prebookings.push({ firstName, lastName, cpf, email, phone, uh, checkin, checkout, adults, children, observations, promoCode });
         localStorage.setItem('prebookings', JSON.stringify(prebookings));
         updatePrebookingTable();
         clearPrebookingInputs();
@@ -283,45 +377,35 @@
       }
     }
 
-    // Atualizar Tabela de Reservas
-    function updateTable() {
-      const tableBody = document.getElementById('reservationTable');
-      tableBody.innerHTML = '';
-      reservations.forEach(res => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="border p-2">${res.room}</td>
-          <td class="border p-2">${res.date}</td>
-          <td class="border p-2">${res.guest}</td>
-          <td class="border p-2">${res.roomType}</td>
-          <td class="border p-2">R$ ${res.tariff.toFixed(2)}</td>
-          <td class="border p-2">${res.status}</td>
-          <td class="border p-2">
-            <button onclick="deleteReservation('${res.room}', '${res.date}')" class="bg-red-600 text-white p-1 rounded">Excluir</button>
-          </td>`;
-        tableBody.appendChild(row);
-      });
+    function getTariff(uh, date) {
+      const checkDate = new Date(date);
+      for (let tariff of tariffs) {
+        const start = new Date(tariff.start);
+        const end = new Date(tariff.end);
+        if (tariff.uh === uh && checkDate >= start && checkDate <= end) {
+          return tariff.price;
+        }
+      }
+      return null;
     }
 
-    // Atualizar Tabela de Tarifas
     function updateTariffTable() {
       const tableBody = document.getElementById('tariffTable');
       tableBody.innerHTML = '';
       tariffs.forEach(tariff => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td class="border p-2">${tariff.roomType}</td>
+          <td class="border p-2">${tariff.uh}</td>
           <td class="border p-2">${tariff.start}</td>
           <td class="border p-2">${tariff.end}</td>
           <td class="border p-2">R$ ${tariff.price.toFixed(2)}</td>
           <td class="border p-2">
-            <button onclick="deleteTariff('${tariff.roomType}', '${tariff.start}')" class="bg-red-600 text-white p-1 rounded">Excluir</button>
+            <button onclick="deleteTariff('${tariff.uh}', '${tariff.start}')" class="bg-red-600 text-white p-1 rounded">Excluir</button>
           </td>`;
         tableBody.appendChild(row);
       });
     }
 
-    // Atualizar Tabela de Pré-Reservas
     function updatePrebookingTable() {
       const tableBody = document.getElementById('prebookingTable');
       tableBody.innerHTML = '';
@@ -329,8 +413,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td class="border p-2">${prebook.firstName} ${prebook.lastName}</td>
-          <td class="border p-2">${prebook.email}</td>
-          <td class="border p-2">${prebook.cpf}</td>
+          <td class="border p-2">${prebook.uh}</td>
           <td class="border p-2">${prebook.checkin}</td>
           <td class="border p-2">${prebook.checkout}</td>
           <td class="border p-2">
@@ -340,37 +423,26 @@
       });
     }
 
-    // Excluir Reserva
-    function deleteReservation(room, date) {
-      reservations = reservations.filter(r => r.room !== room || r.date !== date);
-      localStorage.setItem('reservations', JSON.stringify(reservations));
-      updateTable();
-    }
-
-    // Excluir Tarifa
-    function deleteTariff(roomType, start) {
-      tariffs = tariffs.filter(t => t.roomType !== roomType || t.start !== start);
+    function deleteTariff(uh, start) {
+      tariffs = tariffs.filter(t => t.uh !== uh || t.start !== start);
       localStorage.setItem('tariffs', JSON.stringify(tariffs));
       updateTariffTable();
     }
 
-    // Excluir Pré-Reserva
     function deletePrebooking(email, checkin) {
       prebookings = prebookings.filter(p => p.email !== email || p.checkin !== checkin);
       localStorage.setItem('prebookings', JSON.stringify(prebookings));
       updatePrebookingTable();
     }
 
-    // Limpar Inputs
     function clearReservationInputs() {
-      document.getElementById('roomInput').value = '';
-      document.getElementById('dateInput').value = '';
+      document.getElementById('uhSelect').value = '01';
+      document.getElementById('dateInput').value = '2025-06-01';
       document.getElementById('guestInput').value = '';
-      document.getElementById('roomTypeInput').value = 'standard';
     }
 
     function clearTariffInputs() {
-      document.getElementById('tariffRoomType').value = 'standard';
+      document.getElementById('tariffUh').value = '01';
       document.getElementById('tariffDateStart').value = '';
       document.getElementById('tariffDateEnd').value = '';
       document.getElementById('tariffPrice').value = '';
@@ -382,16 +454,15 @@
       document.getElementById('prebookCPF').value = '';
       document.getElementById('prebookEmail').value = '';
       document.getElementById('prebookPhone').value = '';
+      document.getElementById('prebookUh').value = '01';
       document.getElementById('prebookCheckin').value = '';
       document.getElementById('prebookCheckout').value = '';
       document.getElementById('prebookAdults').value = '';
       document.getElementById('prebookChildren').value = '';
-      document.getElementById('prebookRoomType').value = 'standard';
       document.getElementById('prebookObservations').value = '';
       document.getElementById('prebookPromoCode').value = '';
     }
 
-    // Atualizar Gráfico
     function updateChart() {
       const ctx = document.getElementById('occupancyChart').getContext('2d');
       const statusCount = {
@@ -412,13 +483,8 @@
       });
     }
 
-    // Gerar Relatório
     function generateReport() {
-      const report = {
-        reservations: reservations,
-        tariffs: tariffs,
-        prebookings: prebookings
-      };
+      const report = { reservations, tariffs, prebookings };
       const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -427,25 +493,13 @@
       a.click();
     }
 
-    // Upload para Google Drive
     function uploadToDrive() {
       gapi.load('client:auth2', () => {
-        gapi.client.init({
-          apiKey: API_KEY,
-          clientId: CLIENT_ID,
-          scope: SCOPES
-        }).then(() => {
+        gapi.client.init({ apiKey: API_KEY, clientId: CLIENT_ID, scope: SCOPES }).then(() => {
           gapi.auth2.getAuthInstance().signIn().then(() => {
-            const report = {
-              reservations: reservations,
-              tariffs: tariffs,
-              prebookings: prebookings
-            };
+            const report = { reservations, tariffs, prebookings };
             const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-            const metadata = {
-              name: `relatorio_hotelpulse_${new Date().toISOString()}.json`,
-              mimeType: 'application/json'
-            };
+            const metadata = { name: `relatorio_hotelpulse_${new Date().toISOString()}.json`, mimeType: 'application/json' };
             const form = new FormData();
             form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
             form.append('file', blob);
@@ -463,19 +517,14 @@
       });
     }
 
-    // Enviar Relatório por E-mail
     function sendReportEmail() {
-      const report = {
-        reservations: reservations,
-        tariffs: tariffs,
-        prebookings: prebookings
-      };
+      const report = { reservations, tariffs, prebookings };
       const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
       const reader = new FileReader();
       reader.onloadend = function() {
         const base64data = reader.result.split(',')[1];
         emailjs.send('SEU_SERVICE_ID_AQUI', 'SEU_TEMPLATE_ID_AQUI', {
-          to_email: 'pousadapraiadepontanegra13@gmail.com', // E-mail da pousada
+          to_email: 'pousadapraiadepontanegra13@gmail.com',
           attachment: base64data,
           filename: `relatorio_hotelpulse_${new Date().toISOString()}.json`
         }).then(() => {
@@ -487,10 +536,39 @@
       reader.readAsDataURL(blob);
     }
 
-    // Inicializar Tabelas
-    updateTable();
-    updateTariffTable();
-    updatePrebookingTable();
+    function generateReceipt() {
+      const reservation = reservations.find(r => r.status !== 'Finalizado');
+      if (reservation) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(12);
+        doc.text('RECIBO', 10, 10);
+        doc.text(`№ WH:${Math.floor(Math.random() * 1000000)}`, 10, 20);
+        doc.text('Pousada Praia de Ponta Negra', 10, 30);
+        doc.text('pousadapraiadepontanegra13@gmail.com', 10, 40);
+        doc.text('+55 (84) 98719-2094', 10, 50);
+        doc.text('Rua Luiz Estevam, 2277, Ponta Negra, Natal, Rio Grande do Norte', 10, 60);
+        doc.text('CNPJ: 36.327.333/0001-77', 10, 70);
+        doc.text('Informações do hóspede', 10, 80);
+        doc.text(`Nome: ${reservation.guest}`, 10, 90);
+        doc.text(`Telefone: +55 (84) 99134-4955`, 10, 100);
+        doc.text('Informações da reserva', 10, 110);
+        doc.text(`UH: ${reservation.uh}`, 10, 120);
+        doc.text(`Check-in: ${reservation.checkIn}`, 10, 130);
+        doc.text(`Check-out: ${reservation.checkOut}`, 10, 140);
+        doc.text(`Diárias: ${reservation.diarias}`, 10, 150);
+        doc.text(`Total: R$ ${reservation.total.toFixed(2)}`, 10, 160);
+        doc.text('Pagamento', 10, 170);
+        doc.text(`Data: ${reservation.checkIn}`, 10, 180);
+        doc.text(`Custo: R$ ${reservation.total.toFixed(2)}`, 10, 190);
+        doc.save(`recibo_${reservation.uh}_${reservation.checkIn}.pdf`);
+      } else {
+        alert('Nenhuma reserva ativa para gerar recibo!');
+      }
+    }
+
+    showSection('occupancy');
+    updateCalendar();
   </script>
 </body>
 </html>
